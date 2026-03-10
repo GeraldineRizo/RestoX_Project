@@ -5,4 +5,4 @@ class InventarioConfig(AppConfig):
     name = 'inventario'
 
     def ready(self):
-        import inventario.signals # Esto activa el "escuchador"
+        import inventario.signals # Importante para que funcionen las señales
