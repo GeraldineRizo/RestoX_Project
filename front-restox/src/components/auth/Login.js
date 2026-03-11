@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
+const API_URL = "http://127.0.0.1:8000/api/login/";
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -10,6 +13,7 @@ const Login = () => {
     e.preventDefault();
     try {
       const res = await axios.post('http://127.0.0.1:8000/api/login/', { username, password });
+      const response = await axios.post(API_URL, { username, password });
       localStorage.setItem('token', res.data.access); // Guardamos el pase de entrada
       localStorage.setItem('refresh', res.data.refresh);
       // Redirigir al dashboard genérico o al del negocio

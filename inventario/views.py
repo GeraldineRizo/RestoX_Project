@@ -1,70 +1,63 @@
-from rest_framework import viewsets, permissions
-from .models import Insumo, Categoria, Negocio
-from .serializers import InsumoSerializer, CategoriaSerializer, NegocioSerializer
-
-class InsumoViewSet(viewsets.ModelViewSet):
-    serializer_class = InsumoSerializer
-    # Mantenemos AllowAny solo para esta fase de pruebas
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        
-        # 1. Si el usuario no está logueado, devolvemos todo para que React no falle
-        if not user.is_authenticated:
-            return Insumo.objects.all()
-
-        # 2. Si es superusuario, ve absolutamente todo
-        if user.is_superuser:
-            return Insumo.objects.all()
-            
-        # 3. FILTRO CRÍTICO: 
-        # Si el usuario es normal, filtramos por el propietario del negocio
-        # Asegúrate de que en tu modelo Insumo el campo se llame 'negocio'
-        return Insumo.objects.filter(negocio__propietario=user)
-
-    def perform_create(self, serializer):
-        # Evitamos errores si el usuario es AnonymousUser
-        if not self.request.user.is_authenticated:
-            serializer.save()
-            return
-
-        try:
-            # Buscamos el negocio del usuario actual
-            negocio = Negocio.objects.get(propietario=self.request.user)
-            serializer.save(negocio=negocio)
-        except Negocio.DoesNotExist:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError("Tu usuario no tiene un negocio asignado en el Admin.")
-            
-class CategoriaViewSet(viewsets.ModelViewSet):
-    """
-    Vista para manejar las categorías de cada negocio.
-    """
-    serializer_class = CategoriaSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_superuser:
-            return Categoria.objects.all()
-        return Categoria.objects.filter(negocio__propietario=self.request.user)
-
-    def perform_create(self, serializer):
-        negocio = Negocio.objects.get(propietario=self.request.user)
-        serializer.save(negocio=negocio)
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from decimal import Decimal
+from .models import Insumo, Categoria, Negocio, Movimiento
+from .serializers import InsumoSerializer, CategoriaSerializer, NegocioSerializer, MovimientoSerializer
 
 class NegocioViewSet(viewsets.ModelViewSet):
     queryset = Negocio.objects.all()
     serializer_class = NegocioSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+
+class CategoriaViewSet(viewsets.ModelViewSet):
+    queryset = Categoria.objects.all()
+    serializer_class = CategoriaSerializer
+    permission_classes = [IsAuthenticated]
+
+class InsumoViewSet(viewsets.ModelViewSet):
+    serializer_class = InsumoSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        # Si eres superusuario, ves todo
-        if user.is_superuser:
-            return Negocio.objects.all()
-        
-        # IMPORTANTE: Verifica si en tu modelo pusiste 'propietario' o 'user'
-        # Si el error 500 vuelve, cambia 'propietario' por 'usuario' o 'user'
-        return Negocio.objects.filter(propietario=user)
+        negocio_id = self.request.query_params.get('negocio')
+        if negocio_id:
+            return Insumo.objects.filter(negocio_id=negocio_id)
+        return Insumo.objects.all()
+
+class MovimientoViewSet(viewsets.ModelViewSet):
+    queryset = Movimiento.objects.all()
+    serializer_class = MovimientoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        insumo_id = request.data.get('insumo')
+        tipo = request.data.get('tipo')
+        cantidad_raw = request.data.get('cantidad')
+        negocio_id = request.data.get('negocio')
+
+        try:
+            # La clave para evitar el error anterior es Decimal(str(...))
+            cantidad = Decimal(str(cantidad_raw))
+            insumo = Insumo.objects.get(id=insumo_id)
+            
+            if tipo == 'S':
+                if insumo.stock_actual < cantidad:
+                    return Response({"error": "Stock insuficiente"}, status=status.HTTP_400_BAD_REQUEST)
+                insumo.stock_actual -= cantidad
+            else:
+                insumo.stock_actual += cantidad
+            
+            insumo.save()
+
+            # Guardar el registro del movimiento
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Insumo.DoesNotExist:
+            return Response({"error": "Insumo no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

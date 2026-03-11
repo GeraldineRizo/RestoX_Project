@@ -1,4 +1,10 @@
-# Dependencias de React
+venv_restox/
+__pycache__/
+*.pyc
+.env
+db.sqlite3
+node_modules/
+.DS_Store# Dependencias de React
 front-restox/node_modules/
 front-restox/build/
 

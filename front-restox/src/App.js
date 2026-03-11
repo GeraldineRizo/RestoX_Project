@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 // IMPORTACIONES LIMPIAS (Solo las necesarias para las rutas)
 import Login from "./components/auth/Login";
 import DashboardBase from "./components/layout/DashboardBase";
+import SeccionMovimientos from "./components/SeccionMovimientos";
 
 function App() {
   return (
@@ -19,6 +20,8 @@ function App() {
       
       {/* 4. Si el usuario escribe cualquier otra cosa, mandarlo al login */}
       <Route path="*" element={<Navigate to="/login" />} />
+      {/* 5. Ruta específica para movimientos (si es que se necesita una sección aparte) */}
+      <Route path="/movimientos" element={<SeccionMovimientos />} />
     </Routes>
   );
 }

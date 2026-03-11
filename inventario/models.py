@@ -3,6 +3,7 @@ from django.db import models
 from django.utils.text import slugify
 
 
+
 class Negocio(models.Model):
     propietario = models.ForeignKey(User, on_delete=models.CASCADE) # Permitir varios negocios por usuario si hace falta
     nombre_comercial = models.CharField(max_length=255)
@@ -47,18 +48,18 @@ class Insumo(models.Model):
     def __str__(self):
         return f"{self.nombre} - {self.negocio.nombre_comercial}"
 
-# NUEVO: Modelo para registrar entradas y salidas
 class Movimiento(models.Model):
-    TIPO_MOVIMIENTO = [
-        ('ENTRADA', 'Entrada (Compra/Carga)'),
-        ('SALIDA', 'Salida (Venta/Merma)'),
-    ]
+    TIPOS = (
+        ('E', 'Entrada (Compra/Carga)'),
+        ('S', 'Salida (Venta/Desperdicio)'),
+    )
+    
     insumo = models.ForeignKey('Insumo', on_delete=models.CASCADE, related_name='movimientos')
-    tipo = models.CharField(max_length=10, choices=TIPO_MOVIMIENTO)
-    cantidad = models.DecimalField(max_digits=12, decimal_places=2)
-    motivo = models.CharField(max_length=255, blank=True, help_text="Ej: Venta del día")
+    tipo = models.CharField(max_length=1, choices=TIPOS)
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    motivo = models.CharField(max_length=255, blank=True, null=True)
     fecha = models.DateTimeField(auto_now_add=True)
-    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True) # Quién hizo el movimiento
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True) # Quién lo hizo
 
     def __str__(self):
-        return f"{self.tipo} - {self.insumo.nombre}"
+        return f"{self.get_tipo_display()} - {self.insumo.nombre} ({self.cantidad})"

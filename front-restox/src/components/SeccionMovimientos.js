@@ -60,10 +60,10 @@ function FormularioInsumos({ negocioId, onInsumoAgregado, insumosExistentes, dar
       
       setNombre(''); setCantidad(''); setMinimo(''); setPrecio('');
       onInsumoAgregado();
-      alert("Registro exitoso");
+      alert("Registro exitoso.");
     } catch (err) {
       console.error("Error:", err.response?.data);
-      alert("Error al guardar. Revisa la consola.");
+      alert("Error al guardar. Revisa los datos.");
     }
   };
 
@@ -100,8 +100,8 @@ function FormularioInsumos({ negocioId, onInsumoAgregado, insumosExistentes, dar
             </select>
           </div>
         </div>
-        <button type="submit" className="h-[52px] rounded-2xl font-black uppercase text-[10px] text-white tracking-widest shadow-md" style={{ backgroundColor: colorMarca }}>
-          {existente ? 'Actualizar' : 'Registrar'}
+        <button type="submit" className="h-[52px] rounded-2xl font-black uppercase text-[10px] text-white tracking-widest shadow-md transition-all hover:scale-95" style={{ backgroundColor: colorMarca }}>
+          {existente ? 'Sincronizar' : 'Registrar'}
         </button>
       </form>
     </div>

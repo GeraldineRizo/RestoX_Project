@@ -36,9 +36,9 @@ class InsumoSerializer(serializers.ModelSerializer):
         ret['categoria_nombre'] = instance.categoria.nombre if instance.categoria else None
         return ret
 class MovimientoSerializer(serializers.ModelSerializer):
-    # Agregamos este campo para ver el nombre en la tabla
     insumo_nombre = serializers.ReadOnlyField(source='insumo.nombre')
+    usuario_nombre = serializers.ReadOnlyField(source='usuario.username')
 
     class Meta:
         model = Movimiento
-        fields = '__all__' # O enumera los campos incluyendo 'insumo_nombre'
+        fields = ['id', 'insumo', 'insumo_nombre', 'tipo', 'cantidad', 'motivo', 'fecha', 'usuario_nombre']
