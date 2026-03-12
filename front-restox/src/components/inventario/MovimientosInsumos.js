@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../api/axios';
 import FormularioInsumos from './FormularioInsumos';
 
 function MovimientosInsumos({ insumos, onMovimientoRealizado, darkMode, colorMarca, negocioId }) {
@@ -10,36 +10,35 @@ function MovimientosInsumos({ insumos, onMovimientoRealizado, darkMode, colorMar
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const token = localStorage.getItem('token');
         if (!negocioId) return alert("Error: No se detectó el negocio.");
 
         try {
-            await axios.post('http://127.0.0.1:8000/api/movimientos/', {
+            // Ruta actualizada: /api/movimientos-inventario/
+            await api.post('movimientos-inventario/', {
                 insumo: parseInt(movimiento.insumo),
                 tipo: movimiento.tipo,
                 cantidad: parseFloat(movimiento.cantidad),
                 motivo: movimiento.motivo,
                 negocio: negocioId
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            });
 
             setMovimiento({ insumo: '', tipo: 'S', cantidad: '', motivo: '' });
             onMovimientoRealizado();
-            alert("Operación registrada.");
+            alert("Operación registrada correctamente.");
         } catch (err) {
-            console.error("Error:", err.response?.data);
+            console.error("Error en movimiento:", err.response?.data);
             alert("Error al registrar movimiento.");
         }
     };
 
     const bgCard = darkMode ? "bg-[#1C1F15]" : "bg-[#EBEBE8]";
     const textColor = darkMode ? "text-white" : "text-[#3C4623]";
-    const labelColor = darkMode ? "text-gray-500" : "text-[#7A7A72]";
     const inputClass = `bg-transparent border-b ${darkMode ? 'border-gray-700/50' : 'border-[#BCBCB4]'} p-3 text-xs outline-none focus:border-[#3C4623] transition-all ${textColor}`;
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center px-2">
-                <h2 className={`text-[11px] font-black ${labelColor} uppercase tracking-[0.4em]`}>Inventario</h2>
+                <h2 className="text-[11px] font-black text-gray-500 uppercase tracking-[0.4em]">Gestión de Stock</h2>
                 <button onClick={() => setMostrarNuevoInsumo(!mostrarNuevoInsumo)} className="text-[10px] font-black uppercase tracking-widest" style={{ color: colorMarca }}>
                     {mostrarNuevoInsumo ? "− Cerrar" : "+ Nuevo Insumo / Compra"}
                 </button>
@@ -70,9 +69,9 @@ function MovimientosInsumos({ insumos, onMovimientoRealizado, darkMode, colorMar
                     </div>
                     <div className="flex flex-col">
                         <label className="text-[9px] font-black text-gray-500 mb-2 uppercase tracking-widest">Motivo</label>
-                        <input type="text" name="motivo" value={movimiento.motivo} onChange={handleInputChange} className={inputClass} required />
+                        <input type="text" name="motivo" value={movimiento.motivo} onChange={handleInputChange} className={inputClass} required placeholder="Ej: Ajuste de inventario" />
                     </div>
-                    <button type="submit" className="h-[52px] rounded-2xl font-black text-[10px] text-white tracking-widest" style={{ backgroundColor: colorMarca }}>EJECUTAR</button>
+                    <button type="submit" className="h-[52px] rounded-2xl font-black text-[10px] text-white tracking-widest shadow-md transition-all active:scale-95" style={{ backgroundColor: colorMarca }}>EJECUTAR</button>
                 </form>
             </div>
         </div>

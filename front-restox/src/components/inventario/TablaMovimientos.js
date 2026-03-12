@@ -1,6 +1,6 @@
 import React from 'react';
 
-function TablaMovimientos({ movimientos = [], darkMode, colorMarca }) {
+function TablaMovimientos({ movimientos = [], darkMode }) {
   const containerClass = darkMode ? 'bg-[#25281D] border-zinc-800' : 'bg-white border-gray-100 shadow-sm';
   const rowBorderClass = darkMode ? 'border-zinc-800' : 'border-gray-100';
 
@@ -12,6 +12,7 @@ function TablaMovimientos({ movimientos = [], darkMode, colorMarca }) {
             <th className="p-5">Fecha</th>
             <th className="p-5">Insumo</th>
             <th className="p-5">Tipo</th>
+            <th className="p-5">Motivo</th>
             <th className="p-5 text-right">Cantidad</th>
           </tr>
         </thead>
@@ -19,9 +20,11 @@ function TablaMovimientos({ movimientos = [], darkMode, colorMarca }) {
           {movimientos.map((m) => {
             const esEntrada = m.tipo === 'E' || m.tipo === 'ENTRADA';
             return (
-              <tr key={m.id} className={`border-b last:border-0 ${rowBorderClass} hover:bg-white/5`}>
+              <tr key={m.id} className={`border-b last:border-0 ${rowBorderClass} hover:bg-white/5 transition-colors`}>
                 <td className="p-5 font-mono text-[10px] opacity-60">
-                  {m.fecha ? new Date(m.fecha).toLocaleDateString('es-ES', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '---'}
+                  {m.creado_en // Campo actualizado de m.fecha
+                    ? new Date(m.creado_en).toLocaleDateString('es-ES', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) 
+                    : '---'}
                 </td>
                 <td className="p-5 font-black uppercase tracking-tight">{m.insumo_nombre}</td>
                 <td className="p-5">
@@ -29,6 +32,7 @@ function TablaMovimientos({ movimientos = [], darkMode, colorMarca }) {
                     {esEntrada ? 'ENTRADA' : 'SALIDA'}
                   </span>
                 </td>
+                <td className="p-5 opacity-70 italic">{m.motivo || '---'}</td>
                 <td className={`p-5 text-right font-black ${esEntrada ? 'text-white' : 'text-red-400'}`}>
                   {esEntrada ? '+' : '-'}{m.cantidad}
                 </td>
@@ -39,7 +43,7 @@ function TablaMovimientos({ movimientos = [], darkMode, colorMarca }) {
       </table>
       {movimientos.length === 0 && (
         <div className="p-20 text-center opacity-40">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em]">No hay actividad registrada</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em]">No hay actividad de inventario registrada</p>
         </div>
       )}
     </div>

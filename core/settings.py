@@ -15,7 +15,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'inventario', #
+    'backend', #
 ]
 
 MIDDLEWARE = [
@@ -58,13 +58,12 @@ DATABASES = {
     }
 }
 
-# Configuración básica de REST Framework para usar Tokens
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication', # <-- Este es el nombre correcto
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny', # <--- Cambia esto para pruebas iniciales
     ),
 }
 

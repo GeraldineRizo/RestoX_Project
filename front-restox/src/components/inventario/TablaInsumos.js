@@ -1,6 +1,6 @@
 import React from 'react';
 
-const TablaInsumos = ({ insumos, darkMode, colorMarca }) => {
+const TablaInsumos = ({ insumos, darkMode }) => {
     const tableClass = darkMode ? "text-white" : "text-gray-800";
     const rowClass = darkMode ? "border-zinc-800 hover:bg-zinc-800/50" : "border-gray-100 hover:bg-gray-50";
 
@@ -18,15 +18,21 @@ const TablaInsumos = ({ insumos, darkMode, colorMarca }) => {
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                     {insumos.map((insumo) => {
-                        const esBajoStock = insumo.stock_actual <= insumo.stock_minimo_alerta;
+                        // Comparamos stock_actual con stock_minimo (nombres de tu modelo Django)
+                        const esBajoStock = parseFloat(insumo.stock_actual) <= parseFloat(insumo.stock_minimo);
+                        
                         return (
                             <tr key={insumo.id} className={`transition-colors ${rowClass}`}>
                                 <td className="px-6 py-4 font-medium">{insumo.nombre}</td>
-                                <td className="px-6 py-4 text-zinc-500">{insumo.categoria_nombre || 'Sin categoría'}</td>
+                                <td className="px-6 py-4 text-zinc-500">
+                                    {insumo.categoria_nombre || 'General'}
+                                </td>
                                 <td className="px-6 py-4 text-right font-mono">
                                     {insumo.stock_actual} <span className="text-[10px]">{insumo.unidad_medida}</span>
                                 </td>
-                                <td className="px-6 py-4 text-right font-mono">${insumo.precio_costo}</td>
+                                <td className="px-6 py-4 text-right font-mono">
+                                    ${parseFloat(insumo.precio_costo_actual).toFixed(2)}
+                                </td>
                                 <td className="px-6 py-4 text-center">
                                     <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${
                                         esBajoStock ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'
@@ -40,8 +46,8 @@ const TablaInsumos = ({ insumos, darkMode, colorMarca }) => {
                 </tbody>
             </table>
             {insumos.length === 0 && (
-                <div className="p-10 text-center text-zinc-500 text-xs">
-                    No hay insumos registrados para este negocio.
+                <div className="p-10 text-center text-zinc-500 text-xs italic">
+                    Esperando datos del servidor...
                 </div>
             )}
         </div>

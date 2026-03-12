@@ -1,8 +1,9 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // IMPORTACIONES LIMPIAS (Solo las necesarias para las rutas)
 import Login from "./components/auth/Login";
+import Inventario from "./components/Inventario";
 import DashboardBase from "./components/layout/DashboardBase";
 import SeccionMovimientos from "./components/SeccionMovimientos";
 
@@ -15,6 +16,8 @@ function App() {
       {/* 2. Pantalla de inicio de sesión */}
       <Route path="/login" element={<Login />} />
       
+      <Route path="/inventario" element={<Inventario />} />
+      
       {/* 3. El Dashboard dinámico que carga cualquier negocio por su slug */}
       <Route path="/dashboard/:slug" element={<DashboardBase />} />
       
@@ -22,6 +25,8 @@ function App() {
       <Route path="*" element={<Navigate to="/login" />} />
       {/* 5. Ruta específica para movimientos (si es que se necesita una sección aparte) */}
       <Route path="/movimientos" element={<SeccionMovimientos />} />
+
+
     </Routes>
   );
 }

@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../api/axios';
 
 const CONVERSIONES = { 'gr': 0.001, 'Kg': 1, 'ml': 0.001, 'Lt': 1, 'Und': 1 };
+
+const GRUPOS_UNIDADES = {
+  peso: ['Kg', 'gr'],
+  volumen: ['Lt', 'ml'],
+  conteo: ['Und']
+};
 
 function FormularioInsumos({ negocioId, onInsumoAgregado, insumosExistentes, darkMode, colorMarca }) {
   const [nombre, setNombre] = useState('');
@@ -14,56 +20,87 @@ function FormularioInsumos({ negocioId, onInsumoAgregado, insumosExistentes, dar
 
   useEffect(() => {
     const cargarCategorias = async () => {
-      const token = localStorage.getItem('token');
       try {
-        const res = await axios.get('http://127.0.0.1:8000/api/categorias/', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('categorias/');
         setCategorias(res.data);
-      } catch (err) { console.error("Error:", err); }
+      } catch (err) { console.error("Error cargando categorías:", err); }
     };
     cargarCategorias();
   }, []);
 
-  const existente = insumosExistentes?.find(i => i.nombre.toLowerCase().trim() === nombre.toLowerCase().trim());
+  // CÁLCULO DINÁMICO DEL TOTAL INVERTIDO
+  const totalInvertido = insumosExistentes?.reduce((acc, insumo) => {
+    const stock = parseFloat(insumo.stock_actual) || 0;
+    const costo = parseFloat(insumo.precio_costo_actual) || 0;
+    return acc + (stock * costo);
+  }, 0);
+
+  // Detección de insumo existente
+  const existente = insumosExistentes?.find(
+    i => i.nombre.toLowerCase().trim() === nombre.toLowerCase().trim()
+  );
+
+  // Filtrado de unidades permitidas
+  const getUnidadesPermitidas = () => {
+    if (!existente) return ['Kg', 'gr', 'Lt', 'ml', 'Und'];
+    const udBase = existente.unidad_medida;
+    if (GRUPOS_UNIDADES.peso.includes(udBase)) return GRUPOS_UNIDADES.peso;
+    if (GRUPOS_UNIDADES.volumen.includes(udBase)) return GRUPOS_UNIDADES.volumen;
+    return GRUPOS_UNIDADES.conteo;
+  };
+
+  useEffect(() => {
+    if (existente) {
+      const permitidas = getUnidadesPermitidas();
+      if (!permitidas.includes(unidad)) setUnidad(permitidas[0]);
+    }
+  }, [nombre, existente]);
+
+  // VALIDACIONES DE ENTRADA
+  const handleNombreChange = (e) => {
+    const val = e.target.value;
+    const soloLetras = val.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+    setNombre(soloLetras);
+  };
+
+  const validateNumber = (val) => {
+    return val.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!negocioId) return alert("Error: No se detectó el negocio.");
 
-    const token = localStorage.getItem('token');
     const factor = CONVERSIONES[unidad] || 1;
-    const cantidadFinal = parseFloat(cantidad) * factor;
+    const valorCantidad = parseFloat(cantidad) || 0;
+    const cantidadASumar = valorCantidad * factor;
 
     try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const commonData = {
-        nombre: nombre.trim(),
-        precio_costo: parseFloat(precio),
-        unidad_medida: (unidad === 'gr' ? 'Kg' : (unidad === 'ml' ? 'Lt' : unidad)),
-        negocio: negocioId
-      };
-
       if (existente) {
-        await axios.patch(`http://127.0.0.1:8000/api/insumos/${existente.id}/`, {
-          ...commonData,
-          stock_actual: parseFloat(existente.stock_actual) + cantidadFinal
-        }, { headers });
+        const nuevoStockCalculado = parseFloat(existente.stock_actual) + cantidadASumar;
+        const stockFinal = Math.round(nuevoStockCalculado * 100) / 100;
+        const updateData = {
+          precio_costo_actual: parseFloat(precio),
+          stock_actual: stockFinal
+        };
+        await api.patch(`insumos/${existente.id}/`, updateData);
       } else {
-        await axios.post('http://127.0.0.1:8000/api/insumos/', {
-          ...commonData,
-          stock_actual: cantidadFinal,
-          stock_minimo_alerta: parseFloat(minimo) || 0,
-          categoria: parseInt(categoriaId)
-        }, { headers });
+        const newData = {
+          nombre: nombre.trim(),
+          precio_costo_actual: parseFloat(precio),
+          unidad_medida: (unidad === 'gr' ? 'Kg' : (unidad === 'ml' ? 'Lt' : unidad)),
+          stock_actual: Math.round(cantidadASumar * 100) / 100,
+          stock_minimo: Math.round(parseFloat(minimo || 0) * 100) / 100,
+          categoria: parseInt(categoriaId),
+          negocio: negocioId
+        };
+        await api.post('insumos/', newData);
       }
-      
-      setNombre(''); setCantidad(''); setMinimo(''); setPrecio('');
+      setNombre(''); setCantidad(''); setMinimo(''); setPrecio(''); setCategoriaId('');
       onInsumoAgregado();
-      alert("Registro exitoso");
+      alert("Operación exitosa");
     } catch (err) {
-      console.error("Error:", err.response?.data);
-      alert("Error al guardar. Revisa la consola.");
+      alert(`Error del servidor: ${JSON.stringify(err.response?.data)}`);
     }
   };
 
@@ -73,11 +110,41 @@ function FormularioInsumos({ negocioId, onInsumoAgregado, insumosExistentes, dar
 
   return (
     <div className={`${bgCard} p-8 rounded-[2.5rem] border ${darkMode ? 'border-gray-800' : 'border-[#D1D1CC]'} shadow-lg mb-10`}>
+      
+      {/* SECCIÓN SUPERIOR: TÍTULO Y TOTAL INVERTIDO */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h2 className={`text-xl font-black uppercase tracking-tighter ${textColor}`}>
+            {existente ? 'Actualizar Existencias' : 'Registro de Insumos'}
+          </h2>
+          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Gestión de capital en stock</p>
+        </div>
+
+        <div className={`flex flex-col items-end p-4 rounded-2xl border ${darkMode ? 'bg-[#25281D] border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'}`}>
+          <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em]">Inversión Total</span>
+          <span className="text-2xl font-black tracking-tighter" style={{ color: colorMarca }}>
+            ${totalInvertido.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-flow-col lg:auto-cols-fr gap-6 items-end">
+        {/* Campo Nombre */}
         <div className="flex flex-col">
           <label className="text-[9px] font-black text-gray-500 mb-2 uppercase tracking-widest">Insumo</label>
-          <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className={inputClass} required />
+          <input 
+            type="text" 
+            value={nombre} 
+            onChange={handleNombreChange} 
+            className={inputClass} 
+            required 
+            placeholder="Solo letras..."
+            autoComplete="off" 
+          />
+          {existente && <span className="text-[8px] font-bold text-orange-500 uppercase mt-1">Detectado ({existente.unidad_medida})</span>}
         </div>
+
+        {/* Campo Categoría (Oculto si existe) */}
         {!existente && (
           <div className="flex flex-col">
             <label className="text-[9px] font-black text-gray-500 mb-2 uppercase tracking-widest">Categoría</label>
@@ -87,20 +154,56 @@ function FormularioInsumos({ negocioId, onInsumoAgregado, insumosExistentes, dar
             </select>
           </div>
         )}
+
+        {/* Campo Costo */}
         <div className="flex flex-col">
-          <label className="text-[9px] font-black text-gray-500 mb-2 uppercase tracking-widest">Costo ($)</label>
-          <input type="number" step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} className={inputClass} required />
+          <label className="text-[9px] font-black text-gray-500 mb-2 uppercase tracking-widest">Costo Unit. ($)</label>
+          <input 
+            type="text" 
+            value={precio} 
+            onChange={(e) => setPrecio(validateNumber(e.target.value))} 
+            className={inputClass} 
+            required 
+          />
         </div>
+
+        {/* Campo Cantidad y Unidades */}
         <div className="flex flex-col">
           <label className="text-[9px] font-black text-gray-500 mb-2 uppercase tracking-widest">Cantidad</label>
           <div className="flex gap-2">
-            <input type="number" step="0.01" value={cantidad} onChange={(e) => setCantidad(e.target.value)} className={`${inputClass} flex-1`} required />
+            <input 
+              type="text" 
+              value={cantidad} 
+              onChange={(e) => setCantidad(validateNumber(e.target.value))} 
+              className={`${inputClass} flex-1`} 
+              required 
+            />
             <select value={unidad} onChange={(e) => setUnidad(e.target.value)} className={`${inputClass} w-20 font-bold`}>
-              <option value="Kg">Kg</option><option value="gr">gr</option><option value="Lt">Lt</option><option value="ml">ml</option><option value="Und">Und</option>
+              {getUnidadesPermitidas().map(u => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
         </div>
-        <button type="submit" className="h-[52px] rounded-2xl font-black uppercase text-[10px] text-white tracking-widest shadow-md" style={{ backgroundColor: colorMarca }}>
+
+        {/* Campo Stock Mínimo (Oculto si existe) */}
+        {!existente && (
+          <div className="flex flex-col">
+            <label className="text-[9px] font-black text-gray-500 mb-2 uppercase tracking-widest">Mínimo</label>
+            <input 
+              type="text" 
+              value={minimo} 
+              onChange={(e) => setMinimo(validateNumber(e.target.value))} 
+              className={inputClass} 
+              required 
+            />
+          </div>
+        )}
+
+        {/* Botón de envío */}
+        <button 
+          type="submit" 
+          className="h-[52px] rounded-2xl font-black uppercase text-[10px] text-white tracking-widest shadow-md transition-all active:scale-95" 
+          style={{ backgroundColor: colorMarca }}
+        >
           {existente ? 'Actualizar' : 'Registrar'}
         </button>
       </form>

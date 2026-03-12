@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Movimiento
+from .models import MovimientoInventario, Insumo
 
-@receiver(post_save, sender=Movimiento)
+@receiver(post_save, sender=MovimientoInventario)
 def actualizar_stock(sender, instance, created, **kwargs):
     if created:
         insumo = instance.insumo
