@@ -52,7 +52,7 @@ const Register = () => {
               <h2 className={`text-6xl font-brand italic tracking-tighter whitespace-nowrap transition-all duration-500 ${isAllEmpty ? 'text-[#f4ae17] drop-shadow-[0_0_20px_rgba(244,174,23,0.4)]' : 'text-white'}`}>
                 Sign up
               </h2>
-              <div className={`h-2 mt-2 rounded-full transition-all duration-500 ${isAllEmpty ? 'w-24 bg-[#f4ae17]' : 'w-12 bg-[#672d91]'}`}></div>
+              
             </header>
 
             <form onSubmit={handleRegister} className="space-y-4">

@@ -65,9 +65,7 @@ const Login = () => {
               }`}>
                 Sign in
               </h2>
-              <div className={`h-2 mt-2 rounded-full transition-all duration-700 ${
-                isFormEmpty ? 'w-24 bg-[#f4ae17]' : 'w-12 bg-[#672d91]'
-              }`}></div>
+             
             </header>
 
             <form onSubmit={handleLogin} className="space-y-7">
