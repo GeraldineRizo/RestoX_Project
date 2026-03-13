@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Dashboard from './components/Dashboard';
 // IMPORTACIONES LIMPIAS (Solo las necesarias para las rutas)
 import Login from "./components/auth/Login";
+import Register from "./components/auth/Register";
 import Inventario from "./components/Dashboard";
 import SeccionMovimientos from "./components/SeccionMovimientos";
 
@@ -11,7 +12,7 @@ function App() {
     <Routes>
       {/* 1. Al entrar a la raíz, redirigir al Login automáticamente */}
       <Route path="/" element={<Navigate to="/login" />} />
-
+      <Route path="/register" element={<Register />} /> {/* Nueva ruta */}
       {/* 2. Pantalla de inicio de sesión */}
       <Route path="/login" element={<Login />} />
       

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,83 +6,98 @@ const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
   const navigate = useNavigate();
+
+  const isFormEmpty = !username && !password;
+
+  useEffect(() => {
+    if (isShaking) {
+      const timer = setTimeout(() => setIsShaking(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isShaking]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-
+    setIsLoading(true);
     try {
-      // 1. Cambiamos a /token/ que es el endpoint real en el backend
-      const res = await api.post('token/', { 
-        username, 
-        password 
-      });
-
-      // 2. Guardamos los tokens en localStorage
-      // SimpleJWT devuelve 'access' para el token de entrada
-      localStorage.setItem('token', res.data.access); 
+      const res = await api.post('token/', { username, password });
+      localStorage.setItem('token', res.data.access);
       localStorage.setItem('refresh', res.data.refresh);
-
-      // 3. Redirigir al inventario o dashboard
-      // Usamos navigate para no recargar toda la página innecesariamente
-      navigate('/inventario'); 
-      
+      navigate('/inventario');
     } catch (err) {
-      console.error("Error en login:", err.response?.data);
-      setError('Usuario o contraseña incorrectos');
+      setIsShaking(true);
+      setError('Credenciales incorrectas');
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#1a1c14]">
-      <form 
-        onSubmit={handleLogin} 
-        className="bg-[#1C1F15] p-8 rounded-[2.5rem] shadow-xl border border-gray-800 w-96"
-      >
-        <h2 className="text-2xl font-black text-white mb-6 text-center uppercase tracking-tighter">
-          RestoX Login
-        </h2>
-        
-        {error && (
-          <p className="bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase p-3 rounded-xl mb-4 text-center tracking-widest">
-            {error}
-          </p>
-        )}
+    <div className="min-h-screen w-full flex bg-[#160821] relative overflow-hidden text-white font-sans">
+      
+      {/* Luces de fondo */}
+      <div className="absolute top-[-15%] left-[-5%] w-[60%] h-[60%] bg-[#672d91] rounded-full blur-[150px] opacity-20 animate-pulse z-0"></div>
 
-        <div className="space-y-4">
-          <div className="flex flex-col">
-            <label className="text-[9px] font-black text-gray-500 mb-1 uppercase tracking-widest ml-2">Usuario</label>
-            <input 
-              type="text" 
-              placeholder="Ej: admin" 
-              className="bg-transparent border-b border-gray-700 p-3 text-xs outline-none focus:border-[#A3E635] transition-all text-white"
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
+      {/* Branding Izquierdo (Mismo tamaño y diseño) */}
+      <div className="hidden lg:flex lg:w-2/3 relative items-center justify-center z-10">
+        <div className="text-center">
+           <h1 className="text-[10rem] font-brand tracking-tighter leading-none select-none">
+             Resto<span className="text-[#f4ae17]">X</span>
+           </h1>
+           <p className="text-[#672d91] text-[10px] uppercase tracking-[1.5em] font-black opacity-70 ml-4">
+             Future of Management
+           </p>
+        </div>
+      </div>
 
-          <div className="flex flex-col">
-            <label className="text-[9px] font-black text-gray-500 mb-1 uppercase tracking-widest ml-2">Contraseña</label>
-            <input 
-              type="password" 
-              placeholder="••••••••" 
-              className="bg-transparent border-b border-gray-700 p-3 text-xs outline-none focus:border-[#A3E635] transition-all text-white"
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+      {/* Panel Derecho (33%) */}
+      <div className="w-full lg:w-1/3 min-h-screen flex flex-col z-20">
+        <div className="flex-1 bg-black/30 backdrop-blur-3xl border-l border-white/5 p-10 lg:p-16 flex flex-col justify-center items-center shadow-[-30px_0_100px_rgba(0,0,0,0.6)]">
+          
+          <div className={`w-full max-w-sm ${isShaking ? 'animate-shake' : ''} animate-slide-right`}>
+            
+            <header className="mb-12 w-full">
+              <h2 className={`text-6xl font-brand italic tracking-tighter whitespace-nowrap transition-all duration-700 ${
+                isFormEmpty ? 'text-[#f4ae17] drop-shadow-[0_0_15px_rgba(244,174,23,0.4)]' : 'text-white'
+              }`}>
+                Sign in
+              </h2>
+              <div className={`h-2 mt-2 rounded-full transition-all duration-700 ${
+                isFormEmpty ? 'w-24 bg-[#f4ae17]' : 'w-12 bg-[#672d91]'
+              }`}></div>
+            </header>
+
+            <form onSubmit={handleLogin} className="space-y-7">
+              <div className="space-y-2 group">
+                <label className="text-[10px] font-black text-[#672d91] uppercase tracking-[0.3em] ml-2 group-focus-within:text-[#f4ae17] transition-colors">Usuario</label>
+                <input type="text" className="w-full bg-[#160821]/80 border border-[#672d91]/30 rounded-2xl py-4 px-6 text-sm font-bold outline-none focus:border-[#f4ae17] text-white shadow-inner" placeholder="admin.access" value={username} onChange={(e) => setUsername(e.target.value)} required />
+              </div>
+
+              <div className="space-y-2 group">
+                <label className="text-[10px] font-black text-[#672d91] uppercase tracking-[0.3em] ml-2 group-focus-within:text-[#f4ae17] transition-colors">Contraseña</label>
+                <input type="password" className="w-full bg-[#160821]/80 border border-[#672d91]/30 rounded-2xl py-4 px-6 text-sm font-bold outline-none focus:border-[#f4ae17] text-white shadow-inner" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </div>
+
+              <button type="submit" disabled={isLoading} className="group relative w-full overflow-hidden rounded-2xl bg-[#f4ae17]/70 border border-[#f4ae17]/30 backdrop-blur-sm p-[1px] shadow-lg transition-all active:scale-[0.98] hover:bg-[#f4ae17]/80 mt-4">
+                <div className="relative flex h-full items-center justify-center py-4">
+                  <div className="absolute inset-0 z-0 h-full w-full -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:animate-shimmer"></div>
+                  <span className="relative z-10 font-brand text-black uppercase text-xs tracking-[0.2em]">{isLoading ? '...' : 'Ingresar'}</span>
+                </div>
+              </button>
+            </form>
+
+            <footer className="mt-12 text-center">
+              <p className="text-[#672d91] text-[10px] uppercase tracking-widest font-black">
+                ¿No tienes cuenta? <span onClick={() => navigate('/register')} className="text-[#f4ae17] cursor-pointer hover:text-white transition-colors ml-2 underline underline-offset-4">Regístrate</span>
+              </p>
+            </footer>
           </div>
         </div>
-
-        <button 
-          type="submit"
-          className="w-full mt-8 bg-[#A3E635] text-black py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:opacity-90 transition-opacity shadow-lg"
-        >
-          Entrar al Sistema
-        </button>
-      </form>
+      </div>
     </div>
   );
 };
-
 export default Login;
