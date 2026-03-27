@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode'; // Necesitarás instalar esta librería: npm install jwt-decode
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -23,14 +24,35 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
     try {
-      const res = await api.post('token/', { username, password });
-      localStorage.setItem('token', res.data.access);
-      localStorage.setItem('refresh', res.data.refresh);
-      navigate('/inventario');
+      // Llamamos a nuestro endpoint personalizado configurado en urls.py
+      const res = await api.post('login/', { username, password });
+      
+      const { access, refresh } = res.data;
+
+      // Decodificamos el token para obtener info del usuario/negocio sin hacer otro fetch
+      const decoded = jwtDecode(access);
+      
+      // Guardamos la sesión
+      localStorage.setItem('token', access);
+      localStorage.setItem('refresh', refresh);
+      localStorage.setItem('user_data', JSON.stringify({
+        username: decoded.username,
+        rol: decoded.rol,
+        negocio_id: decoded.negocio_id
+      }));
+
+      // Redirección basada en rol (Ejemplo de lógica Senior)
+      if (decoded.rol === 'Admin_SaaS') {
+        navigate('/admin-panel'); 
+      } else {
+        navigate('/inventario');
+      }
+
     } catch (err) {
       setIsShaking(true);
-      setError('Credenciales incorrectas');
+      setError(err.response?.data?.detail || 'Error de conexión con el servidor');
       setIsLoading(false);
     }
   };
@@ -41,7 +63,7 @@ const Login = () => {
       {/* Luces de fondo */}
       <div className="absolute top-[-15%] left-[-5%] w-[60%] h-[60%] bg-[#672d91] rounded-full blur-[150px] opacity-20 animate-pulse z-0"></div>
 
-      {/* Branding Izquierdo (Mismo tamaño y diseño) */}
+      {/* Branding Izquierdo */}
       <div className="hidden lg:flex lg:w-2/3 relative items-center justify-center z-10">
         <div className="text-center">
            <h1 className="text-[10rem] font-brand tracking-tighter leading-none select-none">
@@ -53,7 +75,7 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Panel Derecho (33%) */}
+      {/* Panel Derecho */}
       <div className="w-full lg:w-1/3 min-h-screen flex flex-col z-20">
         <div className="flex-1 bg-black/30 backdrop-blur-3xl border-l border-white/5 p-10 lg:p-16 flex flex-col justify-center items-center shadow-[-30px_0_100px_rgba(0,0,0,0.6)]">
           
@@ -65,7 +87,7 @@ const Login = () => {
               }`}>
                 Sign in
               </h2>
-             
+              {error && <p className="text-red-500 text-xs mt-2 font-bold uppercase tracking-widest">{error}</p>}
             </header>
 
             <form onSubmit={handleLogin} className="space-y-7">

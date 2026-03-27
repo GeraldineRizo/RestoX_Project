@@ -1,44 +1,71 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import (
     Negocio, Usuario, CategoriaInsumo, Insumo, 
     HistorialPrecio, MovimientoInventario, ProductoMenu, 
     Receta, SesionCaja, MovimientoCaja
 )
 
-# 1. NEGOCIO
+# ==========================================
+# 0. JWT CUSTOMIZADO (Para el Login)
+# ==========================================
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Extiende el token para incluir datos del usuario y negocio
+    directamente en el payload del JWT.
+    """
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Añadimos claims personalizados al token
+        token['username'] = user.username
+        token['rol'] = user.rol
+        token['negocio_id'] = user.negocio.id if user.negocio else None
+        return token
+
+# ==========================================
+# 1. NEGOCIO & USUARIO
+# ==========================================
 class NegocioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Negocio
         fields = '__all__'
 
-# 2. USUARIO
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = ['id', 'username', 'rol', 'negocio']
-        extra_kwargs = {'password': {'write_only': True}} # Seguridad: nunca enviar la clave al front
+        fields = ['id', 'username', 'password', 'email', 'rol', 'negocio']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'email': {'required': False}
+        }
 
-# 3. CATEGORÍA
+    def create(self, validated_data):
+        # Senior Tip: Usamos create_user para hashear la contraseña correctamente
+        user = Usuario.objects.create_user(**validated_data)
+        return user
+
+# ==========================================
+# 2. INVENTARIO (Contexto SaaS)
+# ==========================================
 class CategoriaInsumoSerializer(serializers.ModelSerializer):
     class Meta:
         model = CategoriaInsumo
         fields = '__all__'
 
-# 4. INSUMO (El más importante para tu tabla de React)
 class InsumoSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.ReadOnlyField(source='categoria.nombre')
-
+    
     class Meta:
         model = Insumo
         fields = '__all__'
 
-# 5. HISTORIAL DE PRECIOS
 class HistorialPrecioSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistorialPrecio
         fields = '__all__'
 
-# 6. MOVIMIENTOS
 class MovimientoInventarioSerializer(serializers.ModelSerializer):
     insumo_nombre = serializers.ReadOnlyField(source='insumo.nombre')
     usuario_nombre = serializers.ReadOnlyField(source='usuario.username')
@@ -47,13 +74,14 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
         model = MovimientoInventario
         fields = '__all__'
 
-# 7. PRODUCTO MENÚ
+# ==========================================
+# 3. MENÚ Y RECETAS
+# ==========================================
 class ProductoMenuSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductoMenu
         fields = '__all__'
 
-# 8. RECETA
 class RecetaSerializer(serializers.ModelSerializer):
     insumo_nombre = serializers.ReadOnlyField(source='insumo.nombre')
 
@@ -61,7 +89,9 @@ class RecetaSerializer(serializers.ModelSerializer):
         model = Receta
         fields = '__all__'
 
-# 9. SESIÓN DE CAJA
+# ==========================================
+# 4. CAJA Y FINANZAS
+# ==========================================
 class SesionCajaSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.ReadOnlyField(source='usuario.username')
 
@@ -69,7 +99,6 @@ class SesionCajaSerializer(serializers.ModelSerializer):
         model = SesionCaja
         fields = '__all__'
 
-# 10. MOVIMIENTOS DE CAJA
 class MovimientoCajaSerializer(serializers.ModelSerializer):
     class Meta:
         model = MovimientoCaja
